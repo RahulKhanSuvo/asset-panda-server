@@ -39,6 +39,8 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection = client.db("Assets").collection("users");
+    const packageCollection = client.db("Assets").collection("packages");
+
     app.post("/employees/:email", async (req, res) => {
       const employee = req.body;
       const email = req.params.email;
@@ -53,6 +55,60 @@ async function run() {
         timestamp: Date.now(),
       });
       res.send(result);
+    });
+    // for post data for hr
+    app.post("/hr/:email", async (req, res) => {
+      const employee = req.body;
+      const email = req.params.email;
+      const query = { email };
+      const isExist = await userCollection.findOne(query);
+      if (isExist) {
+        return res.send(isExist);
+      }
+      const result = await userCollection.insertOne({
+        ...employee,
+        role: "hr",
+        paymentStatus: "pending",
+        timestamp: Date.now(),
+      });
+      res.send(result);
+    });
+    // for checking payment status
+    app.get("/payment/status/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.findOne({ email });
+      res.send({
+        role: result?.role,
+        paymentStatus: result?.paymentStatus,
+        packageOption: result?.packageOption,
+        companyLogo: result?.companyLogo,
+      });
+    });
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
+    app.post("/paymentDone", async (req, res) => {
+      const payment = req.body;
+      let members = 0;
+      if (payment.price === 5) {
+        members = 5;
+      } else if (payment.price === 8) {
+        members = 10;
+      } else if (payment.price === 15) {
+        members = 20;
+      } else {
+        return res.status(400).send({ message: "Invalid payment price." });
+      }
+      payment.members = members;
+      const paymentResult = await packageCollection.insertOne(payment);
+      res.send(paymentResult);
     });
   } catch (error) {
     console.log(error);
