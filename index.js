@@ -26,6 +26,7 @@ const verifyToken = (req, res, next) => {
 // admin verify
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const e = require("express");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6ihkv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
@@ -40,6 +41,7 @@ async function run() {
   try {
     const userCollection = client.db("Assets").collection("users");
     const packageCollection = client.db("Assets").collection("packages");
+    const teamCollection = client.db("Assets").collection("teams");
 
     app.post("/employees/:email", async (req, res) => {
       const employee = req.body;
@@ -52,6 +54,7 @@ async function run() {
       const result = await userCollection.insertOne({
         ...employee,
         role: "employee",
+        jobStatus: "not",
         timestamp: Date.now(),
       });
       res.send(result);
@@ -109,6 +112,40 @@ async function run() {
       payment.members = members;
       const paymentResult = await packageCollection.insertOne(payment);
       res.send(paymentResult);
+    });
+    // get employee free employee
+    app.get("/freeEmployee", async (req, res) => {
+      const filter = { jobStatus: "not" };
+      const result = await userCollection.find(filter).toArray();
+      res.send(result);
+    });
+    // for count
+    app.get("/employeeCount/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email };
+      const result = await packageCollection.findOne(filter);
+      res.send(result);
+    });
+    // for user data
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await userCollection.findOne(filter);
+      res.send(result);
+    });
+    // added team
+    app.post("/addTeam", async (req, res) => {
+      const data = req.body;
+      const memberId = data.memberId;
+      const filter = { _id: new ObjectId(memberId) };
+      const updateDoc = {
+        $set: {
+          jobStatus: "yes",
+        },
+      };
+      const updateResult = await userCollection.updateOne(filter, updateDoc);
+      const result = await teamCollection.insertOne(data);
+      res.send(result);
     });
   } catch (error) {
     console.log(error);
