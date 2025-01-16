@@ -42,6 +42,7 @@ async function run() {
     const userCollection = client.db("Assets").collection("users");
     const packageCollection = client.db("Assets").collection("packages");
     const teamCollection = client.db("Assets").collection("teams");
+    const assetsCollection = client.db("Assets").collection("assets");
 
     app.post("/employees/:email", async (req, res) => {
       const employee = req.body;
@@ -143,7 +144,14 @@ async function run() {
           jobStatus: "yes",
         },
       };
-      const updateResult = await userCollection.updateOne(filter, updateDoc);
+      await userCollection.updateOne(filter, updateDoc);
+      const hrFilter = { email: data.hrEmail };
+      const hrUpdateDoc = {
+        $inc: {
+          members: -1,
+        },
+      };
+      await packageCollection.updateOne(hrFilter, hrUpdateDoc);
       const result = await teamCollection.insertOne(data);
       res.send(result);
     });
@@ -173,6 +181,63 @@ async function run() {
         },
       };
       const result = await packageCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    // api for delete member
+    app.delete("/memberDelete/:id", async (req, res) => {
+      const id = req.params.id;
+      const hrEmail = req.query.hrEmail;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          jobStatus: "not",
+        },
+      };
+      await userCollection.updateOne(filter, updateDoc);
+      const hrFilter = { email: hrEmail };
+      const hrUpdateDoc = {
+        $inc: {
+          members: 1,
+        },
+      };
+      await packageCollection.updateOne(hrFilter, hrUpdateDoc);
+      const result = await teamCollection.deleteOne({ memberId: id });
+      res.send(result);
+    });
+    // for add hr new asset
+    app.post("/addedAsset", async (req, res) => {
+      const data = req.body;
+      const result = await assetsCollection.insertOne(data);
+      res.send(result);
+    });
+    // get all assist that add by hr
+    app.get("/allAssets/:email", async (req, res) => {
+      const email = req.params.email;
+      const {
+        search = "",
+        filterStatus = "all",
+        sortOrder = "default",
+      } = req.query;
+      let query = { hrEmail: email };
+      if (search) {
+        query.name = { $regex: search, $options: "i" };
+      }
+      if (filterStatus === "available") {
+        query.quantity = { $gt: "0" };
+      } else if (filterStatus === "out-of-stock") {
+        query.quantity = "0";
+      } else if (filterStatus === "returnable") {
+        query.productType = "returnable";
+      } else if (filterStatus == "non-returnable") {
+        query.productType = "non-returnable";
+      }
+      let sort = {};
+      if (sortOrder === "asc") {
+        sort.quantity = 1;
+      } else if (sortOrder === "desc") {
+        sort.quantity = -1;
+      }
+      const result = await assetsCollection.find(query).sort(sort).toArray();
       res.send(result);
     });
   } catch (error) {
