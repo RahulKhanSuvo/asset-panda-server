@@ -147,6 +147,13 @@ async function run() {
       const result = await teamCollection.insertOne(data);
       res.send(result);
     });
+    // get all team member
+    app.get("/team/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await teamCollection.find({ hrEmail: email }).toArray();
+      res.send(result);
+    });
+    // update member count after payment
   } catch (error) {
     console.log(error);
   }
