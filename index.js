@@ -154,6 +154,27 @@ async function run() {
       res.send(result);
     });
     // update member count after payment
+    app.patch("/paymentStatus/update", async (req, res) => {
+      const { email, price } = req.body;
+      let members = 0;
+      if (price === 5) {
+        members = 5;
+      } else if (price === 8) {
+        members = 10;
+      } else if (price === 15) {
+        members = 20;
+      } else {
+        return res.status(400).send({ message: "Invalid payment price." });
+      }
+      const filter = { email: email };
+      const updateDoc = {
+        $inc: {
+          members: members,
+        },
+      };
+      const result = await packageCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
