@@ -211,7 +211,7 @@ async function run() {
       const result = await assetsCollection.insertOne(data);
       res.send(result);
     });
-    // get all assist that add by hr
+    // get all asset that add by hr
     app.get("/allAssets/:email", async (req, res) => {
       const email = req.params.email;
       const {
@@ -241,10 +241,18 @@ async function run() {
       const result = await assetsCollection.find(query).sort(sort).toArray();
       res.send(result);
     });
+    // delete asset
     app.delete("/deleteAsset/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await assetsCollection.deleteOne(query);
+      res.send(result);
+    });
+    // for get an assets
+    app.get("/assetsUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await assetsCollection.findOne(query);
       res.send(result);
     });
   } catch (error) {
