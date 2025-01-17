@@ -322,7 +322,6 @@ async function run() {
     app.get("/assistRequest/:email", async (req, res) => {
       const hrEmail = req.params.email;
       const { search = "", filterStatus = "" } = req.query;
-      console.log(search);
       let query = { hrEmail: hrEmail };
       if (search) {
         query.name = {
