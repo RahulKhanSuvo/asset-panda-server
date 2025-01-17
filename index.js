@@ -255,6 +255,92 @@ async function run() {
       const result = await assetsCollection.findOne(query);
       res.send(result);
     });
+    // for update assets
+    app.patch("/assetsUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const assetData = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          name: assetData.name,
+
+          productType: assetData.productType,
+          quantity: assetData.quantity,
+          image: assetData.image,
+          hrEmail: assetData.hrEmail,
+          timestamp: assetData.timestamp,
+        },
+      };
+      const result = await assetsCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    // for finding company logo and info
+    app.get("/userStatus/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const findRole = await userCollection.findOne(query);
+      if (findRole?.role === "employee" && findRole?.jobStatus === "yes") {
+        const team = await teamCollection.findOne({
+          memberEmail: email,
+        });
+        res.send({
+          hrEmail: team?.hrEmail,
+          companyLogo: team?.companyLogo,
+          role: team?.memberRole,
+          companyName: team?.companyName,
+        });
+      }
+
+      if (findRole?.role === "hr") {
+        const team = await teamCollection.findOne({
+          hrEmail: email,
+        });
+        res.send({
+          role: findRole?.role,
+          companyLogo: team?.companyLogo,
+          companyName: team?.companyName,
+        });
+      }
+    });
+    // get all of my team member
+    app.get("/myTeamMember/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        hrEmail: email,
+      };
+      const teamMembers = await teamCollection.find(query).toArray();
+      for (let member of teamMembers) {
+        const user = await userCollection.findOne({
+          _id: new ObjectId(member.memberId),
+        });
+        member.MemberImage = user.image;
+      }
+      res.send(teamMembers);
+    });
+    //for asset request
+    app.get("/assistRequest/:email", async (req, res) => {
+      const hrEmail = req.params.email;
+      const { search = "", filterStatus = "" } = req.query;
+
+      let query = { hrEmail: hrEmail };
+      if (search) {
+        query.name = {
+          $regex: search,
+          $options: "i",
+        };
+      }
+      if (filterStatus === "available") {
+        query.quantity = { $gt: 0 };
+      } else if (filterStatus === "out-of-stock") {
+        query.quantity = 0;
+      } else if (filterStatus === "returnable") {
+        query.productType = "returnable";
+      } else if (filterStatus == "non-returnable") {
+        query.productType = "non-returnable";
+      }
+      const result = await assetsCollection.find(query).toArray();
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
