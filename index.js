@@ -322,7 +322,7 @@ async function run() {
     app.get("/assistRequest/:email", async (req, res) => {
       const hrEmail = req.params.email;
       const { search = "", filterStatus = "" } = req.query;
-
+      console.log(search);
       let query = { hrEmail: hrEmail };
       if (search) {
         query.name = {
@@ -356,7 +356,18 @@ async function run() {
     });
     app.get("/hr/allRequest/:email", async (req, res) => {
       const email = req.params.email;
-      const result = await requestCollection.find({ hrEmail: email }).toArray();
+      let query = { hrEmail: email };
+      const { search = "" } = req.query;
+      if (search) {
+        query = {
+          ...query,
+          $or: [
+            { reqName: { $regex: search, $options: "i" } },
+            { reqEmail: { $regex: search, $options: "i" } },
+          ],
+        };
+      }
+      const result = await requestCollection.find(query).toArray();
       res.send(result);
     });
   } catch (error) {
