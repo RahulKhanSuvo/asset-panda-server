@@ -354,6 +354,11 @@ async function run() {
       await assetsCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+    app.get("/hr/allRequest/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await requestCollection.find({ hrEmail: email }).toArray();
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
