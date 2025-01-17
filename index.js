@@ -206,7 +206,8 @@ async function run() {
     });
     // for add hr new asset
     app.post("/addedAsset", async (req, res) => {
-      const data = req.body;
+      let data = req.body;
+      data.timestamp = Date.now();
       const result = await assetsCollection.insertOne(data);
       res.send(result);
     });
@@ -223,9 +224,9 @@ async function run() {
         query.name = { $regex: search, $options: "i" };
       }
       if (filterStatus === "available") {
-        query.quantity = { $gt: "0" };
+        query.quantity = { $gt: 0 };
       } else if (filterStatus === "out-of-stock") {
-        query.quantity = "0";
+        query.quantity = 0;
       } else if (filterStatus === "returnable") {
         query.productType = "returnable";
       } else if (filterStatus == "non-returnable") {
@@ -238,6 +239,12 @@ async function run() {
         sort.quantity = -1;
       }
       const result = await assetsCollection.find(query).sort(sort).toArray();
+      res.send(result);
+    });
+    app.delete("/deleteAsset/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await assetsCollection.deleteOne(query);
       res.send(result);
     });
   } catch (error) {
