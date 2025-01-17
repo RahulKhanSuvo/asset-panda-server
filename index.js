@@ -43,6 +43,7 @@ async function run() {
     const packageCollection = client.db("Assets").collection("packages");
     const teamCollection = client.db("Assets").collection("teams");
     const assetsCollection = client.db("Assets").collection("assets");
+    const requestCollection = client.db("Assets").collection("request");
 
     app.post("/employees/:email", async (req, res) => {
       const employee = req.body;
@@ -339,6 +340,18 @@ async function run() {
         query.productType = "non-returnable";
       }
       const result = await assetsCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.post("/assetRequest", async (req, res) => {
+      const data = req.body;
+      const result = await requestCollection.insertOne(data);
+      const filter = { _id: new ObjectId(data.assetId) };
+      const updateDoc = {
+        $inc: {
+          quantity: -1,
+        },
+      };
+      await assetsCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
   } catch (error) {
