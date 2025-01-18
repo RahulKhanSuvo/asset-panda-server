@@ -302,6 +302,9 @@ async function run() {
           companyName: team?.companyName,
         });
       }
+      if (findRole?.role === "employee") {
+        res.send({ role: findRole?.role, companyLogo: null });
+      }
     });
     // get all of my team member
     app.get("/myTeamMember/:email", async (req, res) => {
@@ -442,6 +445,13 @@ async function run() {
       };
       await assetsCollection.updateOne(assetFilter, assetUpdateDoc);
       res.send(result);
+    });
+    // to get role
+    app.get("/role/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await userCollection.findOne(query);
+      res.send(result?.role);
     });
   } catch (error) {
     console.log(error);
