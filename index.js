@@ -293,8 +293,8 @@ async function run() {
       }
 
       if (findRole?.role === "hr") {
-        const team = await teamCollection.findOne({
-          hrEmail: email,
+        const team = await userCollection.findOne({
+          email: email,
         });
         const isExist = await packageCollection.findOne({ email: email });
         if (!isExist) {
@@ -304,13 +304,14 @@ async function run() {
             companyName: team?.companyName,
             paymentStatus: "pending",
           });
+        } else {
+          return res.send({
+            role: findRole?.role,
+            companyLogo: team?.companyLogo,
+            companyName: team?.companyName,
+            paymentStatus: "done",
+          });
         }
-        return res.send({
-          role: findRole?.role,
-          companyLogo: team?.companyLogo,
-          companyName: team?.companyName,
-          paymentStatus: "done",
-        });
       }
       return res.send({
         role: findRole?.role,
