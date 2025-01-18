@@ -284,7 +284,7 @@ async function run() {
         const team = await teamCollection.findOne({
           memberEmail: email,
         });
-        res.send({
+        return res.send({
           hrEmail: team?.hrEmail,
           companyLogo: team?.companyLogo,
           role: team?.memberRole,
@@ -296,15 +296,17 @@ async function run() {
         const team = await teamCollection.findOne({
           hrEmail: email,
         });
-        res.send({
+        return res.send({
           role: findRole?.role,
           companyLogo: team?.companyLogo,
           companyName: team?.companyName,
         });
       }
-      if (findRole?.role === "employee") {
-        res.send({ role: findRole?.role, companyLogo: null });
-      }
+      return res.send({
+        role: findRole?.role,
+        companyLogo: null,
+        hrEmail: null,
+      });
     });
     // get all of my team member
     app.get("/myTeamMember/:email", async (req, res) => {
