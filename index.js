@@ -382,13 +382,18 @@ async function run() {
     app.patch("/hr/approveRequest/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updateDoc = {
         $set: {
           status: "approved",
           approvalDate: Date.now(),
         },
       };
-      const result = await requestCollection.updateOne(filter, updateDoc);
+      const result = await requestCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
     // for hr rejectRequest
