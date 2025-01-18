@@ -479,16 +479,18 @@ async function run() {
     // for monthly requests
     app.get("/monthlyRequests/:email", async (req, res) => {
       const email = req.params.email;
-      const { month } = req.query;
-      const monthStart = new Date(new Date().getFullYear(), parseInt(month), 1);
+      const month = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const monthStart = new Date(currentYear, parseInt(month), 1).getTime();
       const monthEnd = new Date(
-        new Date().getFullYear(),
+        currentYear,
         parseInt(month) + 1,
         0,
         23,
         59,
         59
-      );
+      ).getTime();
+
       const query = {
         reqEmail: email,
         requestDate: {
@@ -496,7 +498,10 @@ async function run() {
           $lte: monthEnd,
         },
       };
-      const result = await requestCollection.find(query).toArray();
+      const result = await requestCollection
+        .find(query)
+        .sort({ requestDate: -1 })
+        .toArray();
       res.send(result);
     });
   } catch (error) {
