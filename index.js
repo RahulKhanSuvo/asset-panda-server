@@ -421,6 +421,28 @@ async function run() {
       const result = await requestCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+    // for employee return asset
+    app.patch("/employee/returnAsset/:id", async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      console.log(data);
+
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "returned",
+        },
+      };
+      const result = await requestCollection.updateOne(filter, updateDoc);
+      const assetFilter = { _id: new ObjectId(data.assetId) };
+      const assetUpdateDoc = {
+        $inc: {
+          quantity: 1,
+        },
+      };
+      await assetsCollection.updateOne(assetFilter, assetUpdateDoc);
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
