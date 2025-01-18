@@ -369,6 +369,28 @@ async function run() {
       const result = await requestCollection.find(query).toArray();
       res.send(result);
     });
+    // employee asset list
+    app.get("/employee/assetsList/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        reqEmail: email,
+      };
+      const result = await requestCollection.find(query).toArray();
+      res.send(result);
+    });
+    // for hr approveRequest
+    app.patch("/hr/approveRequest/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "approved",
+          approvalDate: Date.now(),
+        },
+      };
+      const result = await requestCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
