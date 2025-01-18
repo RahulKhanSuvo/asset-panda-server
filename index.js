@@ -296,10 +296,20 @@ async function run() {
         const team = await teamCollection.findOne({
           hrEmail: email,
         });
+        const isExist = await packageCollection.findOne({ email: email });
+        if (!isExist) {
+          return res.send({
+            role: findRole?.role,
+            companyLogo: team?.companyLogo,
+            companyName: team?.companyName,
+            paymentStatus: "pending",
+          });
+        }
         return res.send({
           role: findRole?.role,
           companyLogo: team?.companyLogo,
           companyName: team?.companyName,
+          paymentStatus: "done",
         });
       }
       return res.send({
