@@ -466,6 +466,39 @@ async function run() {
       const result = await userCollection.findOne(query);
       res.send(result?.role);
     });
+    // for pending request
+    app.get("/requestedAssets/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        reqEmail: email,
+        status: "pending",
+      };
+      const result = await requestCollection.find(query).toArray();
+      res.send(result);
+    });
+    // for monthly requests
+    app.get("/monthlyRequests/:email", async (req, res) => {
+      const email = req.params.email;
+      const { month } = req.query;
+      const monthStart = new Date(new Date().getFullYear(), parseInt(month), 1);
+      const monthEnd = new Date(
+        new Date().getFullYear(),
+        parseInt(month) + 1,
+        0,
+        23,
+        59,
+        59
+      );
+      const query = {
+        reqEmail: email,
+        requestDate: {
+          $gte: monthStart,
+          $lte: monthEnd,
+        },
+      };
+      const result = await requestCollection.find(query).toArray();
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
