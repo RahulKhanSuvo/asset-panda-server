@@ -372,9 +372,22 @@ async function run() {
     // employee asset list
     app.get("/employee/assetsList/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {
+      let query = {
         reqEmail: email,
       };
+      const { search = "", filter = "all" } = req.query;
+      if (search) {
+        query.assetName = { $regex: search, $options: "i" };
+      }
+      if (filter === "returnable") {
+        query.assetType = "returnable";
+      } else if (filter === "non-returnable") {
+        query.assetType = "non-returnable";
+      } else if (filter === "approved") {
+        query.status = "approved";
+      } else if (filter === "pending") {
+        query.status = "pending";
+      }
       const result = await requestCollection.find(query).toArray();
       res.send(result);
     });
