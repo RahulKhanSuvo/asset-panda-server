@@ -598,6 +598,33 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    // for hr limited stock
+    app.get("/hr/limitedStock/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        hrEmail: email,
+        quantity: { $lte: 10 },
+      };
+      const result = await assetsCollection.find(query).toArray();
+      res.send(result);
+    });
+    // for counting returnable and non returnable
+    app.get("/returnableCount/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        hrEmail: email,
+      };
+      const returnable = await assetsCollection.countDocuments({
+        ...query,
+        productType: "returnable",
+      });
+      const nonReturnable = await assetsCollection.countDocuments({
+        ...query,
+        productType: "non-returnable",
+      });
+      console.log(returnable, nonReturnable);
+      res.send({ returnable, nonReturnable });
+    });
   } catch (error) {
     console.log(error);
   }
