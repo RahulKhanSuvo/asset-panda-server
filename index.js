@@ -44,7 +44,14 @@ async function run() {
     const teamCollection = client.db("Assets").collection("teams");
     const assetsCollection = client.db("Assets").collection("assets");
     const requestCollection = client.db("Assets").collection("request");
-
+    // jwt api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
     app.post("/employees/:email", async (req, res) => {
       const employee = req.body;
       const email = req.params.email;
