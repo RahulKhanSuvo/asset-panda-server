@@ -622,8 +622,33 @@ async function run() {
         ...query,
         productType: "non-returnable",
       });
-      console.log(returnable, nonReturnable);
       res.send({ returnable, nonReturnable });
+    });
+    app.post("/addSelectedTeam", async (req, res) => {
+      const data = req.body;
+      try {
+        for (let memberData of data) {
+          const memberId = memberData.memberId;
+          const filter = { _id: new ObjectId(memberId) };
+          const updateDoc = {
+            $set: {
+              jobStatus: "yes",
+            },
+          };
+          await userCollection.updateOne(filter, updateDoc);
+          const hrFilter = { email: memberData.hrEmail };
+          const hrUpdateDoc = {
+            $inc: {
+              members: -1,
+            },
+          };
+          await packageCollection.updateOne(hrFilter, hrUpdateDoc);
+          await teamCollection.insertOne(memberData);
+        }
+        res.send({ message: "good" });
+      } catch (error) {
+        console.log(error);
+      }
     });
   } catch (error) {
     console.log(error);
