@@ -507,11 +507,47 @@ async function run() {
     // for hr pending request
     app.get("/hr/requestedAssets/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {
-        hrEmail: email,
-        status: "pending",
-      };
-      const result = await requestCollection.find(query).limit(5).toArray();
+      const result = await requestCollection
+        .aggregate([
+          {
+            $match: {
+              hrEmail: email,
+              status: "pending",
+            },
+          },
+          {
+            $addFields: {
+              reqEmail: "$reqEmail",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "reqEmail",
+              foreignField: "email",
+              as: "user",
+            },
+          },
+          {
+            $unwind: "$user",
+          },
+          {
+            $limit: 5,
+          },
+          {
+            $project: {
+              _id: 1,
+              assetName: 1,
+              assetType: 1,
+              status: 1,
+              userName: "$user.name",
+              userEmail: "$user.email",
+              userImage: "$user.image",
+              requestDate: 1,
+            },
+          },
+        ])
+        .toArray();
       res.send(result);
     });
     // for hr most requested
@@ -529,6 +565,7 @@ async function run() {
               name: { $first: "$assetName" },
               hrEmail: { $first: "$hrEmail" },
               assetType: { $first: "$assetType" },
+
               count: { $sum: 1 },
             },
           },
@@ -547,7 +584,7 @@ async function run() {
           },
           { $unwind: "$asset" },
           { $sort: { count: -1 } },
-          { $limit: 5 },
+          { $limit: 4 },
           {
             $project: {
               _id: 0,
