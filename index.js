@@ -146,13 +146,7 @@ async function run() {
         },
       };
       await userCollection.updateOne(filter, updateDoc);
-      const hrFilter = { email: data.hrEmail };
-      const hrUpdateDoc = {
-        $inc: {
-          members: -1,
-        },
-      };
-      await packageCollection.updateOne(hrFilter, hrUpdateDoc);
+
       const result = await teamCollection.insertOne(data);
       res.send(result);
     });
@@ -195,13 +189,6 @@ async function run() {
         },
       };
       await userCollection.updateOne(filter, updateDoc);
-      const hrFilter = { email: hrEmail };
-      const hrUpdateDoc = {
-        $inc: {
-          members: 1,
-        },
-      };
-      await packageCollection.updateOne(hrFilter, hrUpdateDoc);
       const result = await teamCollection.deleteOne({ memberId: id });
       res.send(result);
     });
@@ -636,13 +623,7 @@ async function run() {
             },
           };
           await userCollection.updateOne(filter, updateDoc);
-          const hrFilter = { email: memberData.hrEmail };
-          const hrUpdateDoc = {
-            $inc: {
-              members: -1,
-            },
-          };
-          await packageCollection.updateOne(hrFilter, hrUpdateDoc);
+
           await teamCollection.insertOne(memberData);
         }
         res.send({ message: "good" });
