@@ -504,6 +504,63 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    // for hr pending request
+    app.get("/hr/requestedAssets/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        hrEmail: email,
+        status: "pending",
+      };
+      const result = await requestCollection.find(query).limit(5).toArray();
+      res.send(result);
+    });
+    // for hr most requested
+    app.get("/hr/mostRequested/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        hrEmail: email,
+      };
+      const result = await requestCollection
+        .aggregate([
+          { $match: query },
+          {
+            $group: {
+              _id: "$assetId",
+              name: { $first: "$assetName" },
+              hrEmail: { $first: "$hrEmail" },
+              assetType: { $first: "$assetType" },
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $addFields: {
+              _id: { $toObjectId: "$_id" },
+            },
+          },
+          {
+            $lookup: {
+              from: "assets",
+              localField: "_id",
+              foreignField: "_id",
+              as: "asset",
+            },
+          },
+          { $unwind: "$asset" },
+          { $sort: { count: -1 } },
+          { $limit: 5 },
+          {
+            $project: {
+              _id: 0,
+              name: 1,
+              assetType: 1,
+              count: 1,
+              quantity: "$asset.quantity",
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
   } catch (error) {
     console.log(error);
   }
