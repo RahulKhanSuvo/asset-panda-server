@@ -667,7 +667,24 @@ async function run() {
         console.log(error);
       }
     });
-    app.post("/cancelStatus", (req, res) => {});
+    app.get("/hr/activity/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { hrEmail: email };
+      const totalRequests = await requestCollection.countDocuments(query);
+      const totalApproved = await requestCollection.countDocuments({
+        ...query,
+        status: "approved",
+      });
+      const totalRejected = await requestCollection.countDocuments({
+        ...query,
+        status: "rejected",
+      });
+      const totalReturned = await requestCollection.countDocuments({
+        ...query,
+        status: "returned",
+      });
+      res.send({ totalRequests, totalApproved, totalRejected, totalReturned });
+    });
   } catch (error) {
     console.log(error);
   }
