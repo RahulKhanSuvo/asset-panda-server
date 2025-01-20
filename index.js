@@ -667,7 +667,7 @@ async function run() {
         console.log(error);
       }
     });
-    app.get("/hr/activity/:email", async (req, res) => {
+    app.get("/hr/activity/:email", verifyToken, verifyHr, async (req, res) => {
       const email = req.params.email;
       const query = { hrEmail: email };
       const totalRequests = await requestCollection.countDocuments(query);
