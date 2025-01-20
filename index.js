@@ -100,7 +100,7 @@ async function run() {
       res.send(result);
     });
     // for checking payment status
-    app.get("/payment/status/:email", verifyToken, async (req, res) => {
+    app.get("/payment/status/:email", async (req, res) => {
       const email = req.params.email;
       const result = await userCollection.findOne({ email });
       res.send({
@@ -237,9 +237,9 @@ async function run() {
       } else if (filterStatus === "out-of-stock") {
         query.quantity = 0;
       } else if (filterStatus === "returnable") {
-        query.productType = "returnable";
+        query.assetType = "returnable";
       } else if (filterStatus == "non-returnable") {
-        query.productType = "non-returnable";
+        query.assetType = "non-returnable";
       }
       let sort = {};
       if (sortOrder === "asc") {
@@ -273,7 +273,7 @@ async function run() {
         $set: {
           name: assetData.name,
 
-          productType: assetData.productType,
+          assetType: assetData.assetType,
           quantity: assetData.quantity,
           image: assetData.image,
           hrEmail: assetData.hrEmail,
@@ -358,9 +358,9 @@ async function run() {
       } else if (filterStatus === "out-of-stock") {
         query.quantity = 0;
       } else if (filterStatus === "returnable") {
-        query.productType = "returnable";
+        query.assetType = "returnable";
       } else if (filterStatus == "non-returnable") {
-        query.productType = "non-returnable";
+        query.assetType = "non-returnable";
       }
       const result = await assetsCollection.find(query).toArray();
       res.send(result);
@@ -465,6 +465,21 @@ async function run() {
         },
       };
       await assetsCollection.updateOne(assetFilter, assetUpdateDoc);
+      res.send(result);
+    });
+    // for cancel element
+    app.patch("/employee/assetsCancel/:id", async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      console.log(data);
+
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "cancel",
+        },
+      };
+      const result = await requestCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
     // to get role
@@ -622,13 +637,13 @@ async function run() {
       const query = {
         hrEmail: email,
       };
-      const returnable = await assetsCollection.countDocuments({
+      const returnable = await requestCollection.countDocuments({
         ...query,
-        productType: "returnable",
+        assetType: "returnable",
       });
-      const nonReturnable = await assetsCollection.countDocuments({
+      const nonReturnable = await requestCollection.countDocuments({
         ...query,
-        productType: "non-returnable",
+        assetType: "non-returnable",
       });
       res.send({ returnable, nonReturnable });
     });
@@ -652,6 +667,7 @@ async function run() {
         console.log(error);
       }
     });
+    app.post("/cancelStatus", (req, res) => {});
   } catch (error) {
     console.log(error);
   }
