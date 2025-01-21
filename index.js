@@ -451,7 +451,6 @@ async function run() {
     app.patch("/employee/returnAsset/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const data = req.body;
-      console.log(data);
 
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -473,7 +472,6 @@ async function run() {
     app.patch("/employee/assetsCancel/:id", async (req, res) => {
       const id = req.params.id;
       const data = req.body;
-      console.log(data);
 
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -694,7 +692,7 @@ async function run() {
 run();
 
 app.get("/", (req, res) => {
-  res.send("boss is running");
+  res.send("assets is running");
 });
 app.listen(port, () => {
   console.log("App listening on port 5000!");
