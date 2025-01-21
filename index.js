@@ -11,7 +11,6 @@ app.use(express.json());
 
 // middlewares
 const verifyToken = (req, res, next) => {
-  console.log(req.headers.authorization);
   if (!req.headers.authorization) {
     return res.status(401).send({ message: "forbidden access" });
   }
@@ -390,7 +389,10 @@ async function run() {
           ],
         };
       }
-      const result = await requestCollection.find(query).toArray();
+      const result = await requestCollection
+        .find(query)
+        .sort({ requestDate: -1 })
+        .toArray();
       res.send(result);
     });
     // employee asset list
