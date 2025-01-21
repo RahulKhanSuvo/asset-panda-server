@@ -52,6 +52,7 @@ async function run() {
       });
       res.send({ token });
     });
+    // admin verification
     const verifyHr = async (req, res, next) => {
       const email = req.user.email;
       const query = { email };
@@ -60,6 +61,19 @@ async function run() {
         return res
           .status(403)
           .send({ message: "forbidden access! Admin  only" });
+      }
+
+      next();
+    };
+    // employ verification
+    const verifyEmployee = async (req, res, next) => {
+      const email = req.user.email;
+      const query = { email };
+      const result = await userCollection.findOne(query);
+      if (!result || result?.role !== "employee") {
+        return res
+          .status(403)
+          .send({ message: "forbidden access! employee  only" });
       }
 
       next();
@@ -156,7 +170,7 @@ async function run() {
       res.send(result);
     });
     // added team
-    app.post("/addTeam", verifyToken, async (req, res) => {
+    app.post("/addTeam", verifyToken, verifyHr, async (req, res) => {
       const data = req.body;
       const memberId = data.memberId;
       const filter = { _id: new ObjectId(memberId) };
@@ -199,7 +213,7 @@ async function run() {
       res.send(result);
     });
     // api for delete member
-    app.delete("/memberDelete/:id", verifyToken, async (req, res) => {
+    app.delete("/memberDelete/:id", verifyToken, verifyHr, async (req, res) => {
       const id = req.params.id;
       const hrEmail = req.query.hrEmail;
       const filter = { _id: new ObjectId(id) };
@@ -213,14 +227,14 @@ async function run() {
       res.send(result);
     });
     // for add hr new asset
-    app.post("/addedAsset", verifyToken, async (req, res) => {
+    app.post("/addedAsset", verifyToken, verifyHr, async (req, res) => {
       let data = req.body;
       data.timestamp = Date.now();
       const result = await assetsCollection.insertOne(data);
       res.send(result);
     });
     // get all asset that add by hr
-    app.get("/allAssets/:email", verifyToken, async (req, res) => {
+    app.get("/allAssets/:email", verifyToken, verifyHr, async (req, res) => {
       const email = req.params.email;
       const {
         search = "",
@@ -250,21 +264,21 @@ async function run() {
       res.send(result);
     });
     // delete asset
-    app.delete("/deleteAsset/:id", verifyToken, async (req, res) => {
+    app.delete("/deleteAsset/:id", verifyToken, verifyHr, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await assetsCollection.deleteOne(query);
       res.send(result);
     });
     // for get an assets
-    app.get("/assetsUpdate/:id", verifyToken, async (req, res) => {
+    app.get("/assetsUpdate/:id", verifyToken, verifyHr, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await assetsCollection.findOne(query);
       res.send(result);
     });
     // for update assets
-    app.patch("/assetsUpdate/:id", verifyToken, async (req, res) => {
+    app.patch("/assetsUpdate/:id", verifyToken, verifyHr, async (req, res) => {
       const id = req.params.id;
       const assetData = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -327,7 +341,7 @@ async function run() {
       });
     });
     // get all of my team member
-    app.get("/myTeamMember/:email", verifyToken, async (req, res) => {
+    app.get("/assetsUpdate/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = {
         hrEmail: email,
@@ -342,29 +356,34 @@ async function run() {
       res.send(teamMembers);
     });
     //for asset request
-    app.get("/assistRequest/:email", verifyToken, async (req, res) => {
-      const hrEmail = req.params.email;
-      const { search = "", filterStatus = "" } = req.query;
-      let query = { hrEmail: hrEmail };
-      if (search) {
-        query.name = {
-          $regex: search,
-          $options: "i",
-        };
+    app.get(
+      "/assistRequest/:email",
+      verifyToken,
+      verifyEmployee,
+      async (req, res) => {
+        const hrEmail = req.params.email;
+        const { search = "", filterStatus = "" } = req.query;
+        let query = { hrEmail: hrEmail };
+        if (search) {
+          query.name = {
+            $regex: search,
+            $options: "i",
+          };
+        }
+        if (filterStatus === "available") {
+          query.quantity = { $gt: 0 };
+        } else if (filterStatus === "out-of-stock") {
+          query.quantity = 0;
+        } else if (filterStatus === "returnable") {
+          query.assetType = "returnable";
+        } else if (filterStatus == "non-returnable") {
+          query.assetType = "non-returnable";
+        }
+        const result = await assetsCollection.find(query).toArray();
+        res.send(result);
       }
-      if (filterStatus === "available") {
-        query.quantity = { $gt: 0 };
-      } else if (filterStatus === "out-of-stock") {
-        query.quantity = 0;
-      } else if (filterStatus === "returnable") {
-        query.assetType = "returnable";
-      } else if (filterStatus == "non-returnable") {
-        query.assetType = "non-returnable";
-      }
-      const result = await assetsCollection.find(query).toArray();
-      res.send(result);
-    });
-    app.post("/assetRequest", async (req, res) => {
+    );
+    app.post("/assetRequest", verifyToken, verifyEmployee, async (req, res) => {
       const data = req.body;
       const result = await requestCollection.insertOne(data);
       const filter = { _id: new ObjectId(data.assetId) };
@@ -376,112 +395,142 @@ async function run() {
       await assetsCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    app.get("/hr/allRequest/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      let query = { hrEmail: email };
-      const { search = "" } = req.query;
-      if (search) {
-        query = {
-          ...query,
-          $or: [
-            { reqName: { $regex: search, $options: "i" } },
-            { reqEmail: { $regex: search, $options: "i" } },
-          ],
-        };
+    app.get(
+      "/hr/allRequest/:email",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const email = req.params.email;
+        let query = { hrEmail: email };
+        const { search = "" } = req.query;
+        if (search) {
+          query = {
+            ...query,
+            $or: [
+              { reqName: { $regex: search, $options: "i" } },
+              { reqEmail: { $regex: search, $options: "i" } },
+            ],
+          };
+        }
+        const result = await requestCollection
+          .find(query)
+          .sort({ requestDate: -1 })
+          .toArray();
+        res.send(result);
       }
-      const result = await requestCollection
-        .find(query)
-        .sort({ requestDate: -1 })
-        .toArray();
-      res.send(result);
-    });
+    );
     // employee asset list
-    app.get("/employee/assetsList/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      let query = {
-        reqEmail: email,
-      };
-      const { search = "", filter = "all" } = req.query;
-      if (search) {
-        query.assetName = { $regex: search, $options: "i" };
+    app.get(
+      "/employee/assetsList/:email",
+      verifyToken,
+      verifyEmployee,
+      async (req, res) => {
+        const email = req.params.email;
+        let query = {
+          reqEmail: email,
+        };
+        const { search = "", filter = "all" } = req.query;
+        if (search) {
+          query.assetName = { $regex: search, $options: "i" };
+        }
+        if (filter === "returnable") {
+          query.assetType = "returnable";
+        } else if (filter === "non-returnable") {
+          query.assetType = "non-returnable";
+        } else if (filter === "approved") {
+          query.status = "approved";
+        } else if (filter === "pending") {
+          query.status = "pending";
+        }
+        const result = await requestCollection.find(query).toArray();
+        res.send(result);
       }
-      if (filter === "returnable") {
-        query.assetType = "returnable";
-      } else if (filter === "non-returnable") {
-        query.assetType = "non-returnable";
-      } else if (filter === "approved") {
-        query.status = "approved";
-      } else if (filter === "pending") {
-        query.status = "pending";
-      }
-      const result = await requestCollection.find(query).toArray();
-      res.send(result);
-    });
+    );
     // for hr approveRequest
-    app.patch("/hr/approveRequest/:id", verifyToken, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: {
-          status: "approved",
-          approvalDate: Date.now(),
-        },
-      };
-      const result = await requestCollection.updateOne(
-        filter,
-        updateDoc,
-        options
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/hr/approveRequest/:id",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const options = { upsert: true };
+        const updateDoc = {
+          $set: {
+            status: "approved",
+            approvalDate: Date.now(),
+          },
+        };
+        const result = await requestCollection.updateOne(
+          filter,
+          updateDoc,
+          options
+        );
+        res.send(result);
+      }
+    );
     // for hr rejectRequest
-    app.patch("/hr/rejectRequest/:id", verifyToken, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          status: "rejected",
-        },
-      };
-      const result = await requestCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/hr/rejectRequest/:id",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            status: "rejected",
+          },
+        };
+        const result = await requestCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
     // for employee return asset
-    app.patch("/employee/returnAsset/:id", verifyToken, async (req, res) => {
-      const id = req.params.id;
-      const data = req.body;
+    app.patch(
+      "/employee/returnAsset/:id",
+      verifyToken,
+      verifyEmployee,
+      async (req, res) => {
+        const id = req.params.id;
+        const data = req.body;
 
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          status: "returned",
-        },
-      };
-      const result = await requestCollection.updateOne(filter, updateDoc);
-      const assetFilter = { _id: new ObjectId(data.assetId) };
-      const assetUpdateDoc = {
-        $inc: {
-          quantity: 1,
-        },
-      };
-      await assetsCollection.updateOne(assetFilter, assetUpdateDoc);
-      res.send(result);
-    });
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            status: "returned",
+          },
+        };
+        const result = await requestCollection.updateOne(filter, updateDoc);
+        const assetFilter = { _id: new ObjectId(data.assetId) };
+        const assetUpdateDoc = {
+          $inc: {
+            quantity: 1,
+          },
+        };
+        await assetsCollection.updateOne(assetFilter, assetUpdateDoc);
+        res.send(result);
+      }
+    );
     // for cancel element
-    app.patch("/employee/assetsCancel/:id", async (req, res) => {
-      const id = req.params.id;
-      const data = req.body;
+    app.patch(
+      "/employee/assetsCancel/:id",
+      verifyToken,
+      verifyEmployee,
+      async (req, res) => {
+        const id = req.params.id;
+        const data = req.body;
 
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          status: "cancel",
-        },
-      };
-      const result = await requestCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            status: "cancel",
+          },
+        };
+        const result = await requestCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
     // to get role
     app.get("/role/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -490,164 +539,194 @@ async function run() {
       res.send(result?.role);
     });
     // for pending request
-    app.get("/requestedAssets/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        reqEmail: email,
-        status: "pending",
-      };
-      const result = await requestCollection.find(query).toArray();
-      res.send(result);
-    });
+    app.get(
+      "/requestedAssets/:email",
+      verifyToken,
+      verifyEmployee,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = {
+          reqEmail: email,
+          status: "pending",
+        };
+        const result = await requestCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
     // for monthly requests
-    app.get("/monthlyRequests/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const month = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      const monthStart = new Date(currentYear, parseInt(month), 1).getTime();
-      const monthEnd = new Date(
-        currentYear,
-        parseInt(month) + 1,
-        0,
-        23,
-        59,
-        59
-      ).getTime();
+    app.get(
+      "/monthlyRequests/:email",
+      verifyToken,
+      verifyEmployee,
+      async (req, res) => {
+        const email = req.params.email;
+        const month = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const monthStart = new Date(currentYear, parseInt(month), 1).getTime();
+        const monthEnd = new Date(
+          currentYear,
+          parseInt(month) + 1,
+          0,
+          23,
+          59,
+          59
+        ).getTime();
 
-      const query = {
-        reqEmail: email,
-        requestDate: {
-          $gte: monthStart,
-          $lte: monthEnd,
-        },
-      };
-      const result = await requestCollection
-        .find(query)
-        .sort({ requestDate: -1 })
-        .toArray();
-      res.send(result);
-    });
+        const query = {
+          reqEmail: email,
+          requestDate: {
+            $gte: monthStart,
+            $lte: monthEnd,
+          },
+        };
+        const result = await requestCollection
+          .find(query)
+          .sort({ requestDate: -1 })
+          .toArray();
+        res.send(result);
+      }
+    );
     // for hr pending request
-    app.get("/hr/requestedAssets/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const result = await requestCollection
-        .aggregate([
-          {
-            $match: {
-              hrEmail: email,
-              status: "pending",
+    app.get(
+      "/hr/requestedAssets/:email",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const email = req.params.email;
+        const result = await requestCollection
+          .aggregate([
+            {
+              $match: {
+                hrEmail: email,
+                status: "pending",
+              },
             },
-          },
-          {
-            $addFields: {
-              reqEmail: "$reqEmail",
+            {
+              $addFields: {
+                reqEmail: "$reqEmail",
+              },
             },
-          },
-          {
-            $lookup: {
-              from: "users",
-              localField: "reqEmail",
-              foreignField: "email",
-              as: "user",
+            {
+              $lookup: {
+                from: "users",
+                localField: "reqEmail",
+                foreignField: "email",
+                as: "user",
+              },
             },
-          },
-          {
-            $unwind: "$user",
-          },
-          {
-            $limit: 5,
-          },
-          {
-            $project: {
-              _id: 1,
-              assetName: 1,
-              assetType: 1,
-              status: 1,
-              userName: "$user.name",
-              userEmail: "$user.email",
-              userImage: "$user.image",
-              requestDate: 1,
+            {
+              $unwind: "$user",
             },
-          },
-        ])
-        .toArray();
-      res.send(result);
-    });
+            {
+              $limit: 5,
+            },
+            {
+              $project: {
+                _id: 1,
+                assetName: 1,
+                assetType: 1,
+                status: 1,
+                userName: "$user.name",
+                userEmail: "$user.email",
+                userImage: "$user.image",
+                requestDate: 1,
+              },
+            },
+          ])
+          .toArray();
+        res.send(result);
+      }
+    );
     // for hr most requested
-    app.get("/hr/mostRequested/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        hrEmail: email,
-      };
-      const result = await requestCollection
-        .aggregate([
-          { $match: query },
-          {
-            $group: {
-              _id: "$assetId",
-              name: { $first: "$assetName" },
-              hrEmail: { $first: "$hrEmail" },
-              assetType: { $first: "$assetType" },
+    app.get(
+      "/hr/mostRequested/:email",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = {
+          hrEmail: email,
+        };
+        const result = await requestCollection
+          .aggregate([
+            { $match: query },
+            {
+              $group: {
+                _id: "$assetId",
+                name: { $first: "$assetName" },
+                hrEmail: { $first: "$hrEmail" },
+                assetType: { $first: "$assetType" },
 
-              count: { $sum: 1 },
+                count: { $sum: 1 },
+              },
             },
-          },
-          {
-            $addFields: {
-              _id: { $toObjectId: "$_id" },
+            {
+              $addFields: {
+                _id: { $toObjectId: "$_id" },
+              },
             },
-          },
-          {
-            $lookup: {
-              from: "assets",
-              localField: "_id",
-              foreignField: "_id",
-              as: "asset",
+            {
+              $lookup: {
+                from: "assets",
+                localField: "_id",
+                foreignField: "_id",
+                as: "asset",
+              },
             },
-          },
-          { $unwind: "$asset" },
-          { $sort: { count: -1 } },
-          { $limit: 4 },
-          {
-            $project: {
-              _id: 0,
-              name: 1,
-              assetType: 1,
-              count: 1,
-              quantity: "$asset.quantity",
+            { $unwind: "$asset" },
+            { $sort: { count: -1 } },
+            { $limit: 4 },
+            {
+              $project: {
+                _id: 0,
+                name: 1,
+                assetType: 1,
+                count: 1,
+                quantity: "$asset.quantity",
+              },
             },
-          },
-        ])
-        .toArray();
-      res.send(result);
-    });
+          ])
+          .toArray();
+        res.send(result);
+      }
+    );
     // for hr limited stock
-    app.get("/hr/limitedStock/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        hrEmail: email,
-        quantity: { $lte: 10 },
-      };
-      const result = await assetsCollection.find(query).toArray();
-      res.send(result);
-    });
+    app.get(
+      "/hr/limitedStock/:email",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = {
+          hrEmail: email,
+          quantity: { $lte: 10 },
+        };
+        const result = await assetsCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
     // for counting returnable and non returnable
-    app.get("/returnableCount/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        hrEmail: email,
-      };
-      const returnable = await requestCollection.countDocuments({
-        ...query,
-        assetType: "returnable",
-      });
-      const nonReturnable = await requestCollection.countDocuments({
-        ...query,
-        assetType: "non-returnable",
-      });
-      res.send({ returnable, nonReturnable });
-    });
-    app.post("/addSelectedTeam", verifyToken, async (req, res) => {
+    app.get(
+      "/returnableCount/:email",
+      verifyToken,
+      verifyHr,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = {
+          hrEmail: email,
+        };
+        const returnable = await requestCollection.countDocuments({
+          ...query,
+          assetType: "returnable",
+        });
+        const nonReturnable = await requestCollection.countDocuments({
+          ...query,
+          assetType: "non-returnable",
+        });
+        res.send({ returnable, nonReturnable });
+      }
+    );
+    app.post("/addSelectedTeam", verifyToken, verifyHr, async (req, res) => {
       const data = req.body;
       try {
         for (let memberData of data) {
