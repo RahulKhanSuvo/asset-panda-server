@@ -341,7 +341,7 @@ async function run() {
       });
     });
     // get all of my team member
-    app.get("/assetsUpdate/:email", verifyToken, async (req, res) => {
+    app.get("/myTeamMember/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = {
         hrEmail: email,
