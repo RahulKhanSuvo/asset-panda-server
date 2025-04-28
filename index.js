@@ -6,7 +6,17 @@ const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SEC_KEY);
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://asset-panda-rahul-khan-suvo.netlify.app",
+      "https://car-phi-henna.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.options("*", cors());
 app.use(express.json());
 
 // middlewares
