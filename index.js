@@ -10,7 +10,7 @@ app.use(
   cors({
     origin: [
       "https://asset-panda-rahul-khan-suvo.netlify.app",
-      "https://car-phi-henna.vercel.app",
+      "https://pandaasset.vercel.app",
       "http://localhost:5000",
       "http://localhost:5173",
     ],
