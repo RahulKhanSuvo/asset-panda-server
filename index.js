@@ -11,6 +11,8 @@ app.use(
     origin: [
       "https://asset-panda-rahul-khan-suvo.netlify.app",
       "https://car-phi-henna.vercel.app",
+      "http://localhost:5000",
+      "http://localhost:5173",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
